@@ -1,0 +1,17 @@
+{
+  "name": "My Pomodoro",
+  "short_name": "Pomodoro",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#dceaf7",
+  "theme_color": "#dceaf7",
+  "description": "20分集中・2分休憩のシンプルなPomodoroタイマー",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

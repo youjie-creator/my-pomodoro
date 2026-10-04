@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#dceaf7">
+<meta name="description" content="シンプルな20分集中・2分休憩のPomodoroタイマー">
+<link rel="manifest" href="manifest.webmanifest">
+<title>My Pomodoro</title>
+<style>
+:root { font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color-scheme: light; }
+* { box-sizing:border-box; }
+body {
+  margin:0; min-height:100vh; min-height:100dvh; display:grid; place-items:center;
+  background:#dceaf7; color:#263746; transition:background-color .6s ease,color .6s ease;
+}
+body.break-mode { background:#f8e3cf; color:#4a3a2d; }
+main { width:min(92vw,430px); text-align:center; padding:28px 18px; }
+h1 { font-size:24px; margin:0 0 28px; }
+.phase { font-size:18px; margin-bottom:12px; opacity:.85; }
+.time { font-variant-numeric:tabular-nums; font-size:clamp(72px,22vw,120px);
+  font-weight:700; letter-spacing:-3px; margin:8px 0 34px; }
+button { width:100%; border:0; border-radius:16px; padding:17px; font-size:20px;
+  font-weight:700; margin-top:12px; background:rgba(255,255,255,.78); color:#263746;
+  box-shadow:0 2px 10px rgba(0,0,0,.06); }
+button.secondary { background:rgba(255,255,255,.45); color:inherit; }
+button:disabled { opacity:.45; }
+.status { min-height:28px; margin-top:22px; opacity:.7; font-size:14px; line-height:1.5; }
+.note { margin-top:24px; font-size:12px; line-height:1.6; opacity:.45; }
+</style>
+</head>
+<body>
+<main>
+<h1>My Pomodoro</h1>
+<div class="phase" id="phase">準備完了</div>
+<div class="time" id="time">20:00</div>
+<button id="start">Start</button>
+<button id="end" class="secondary" disabled>End</button>
+<div class="status" id="status"></div>
+<div class="note">20分作業 → 2分休憩を繰り返します。</div>
+</main>
+<script>
+(() => {
+  const WORK=20*60*1000, BREAK=2*60*1000;
+  let running=false, phase="work", endAt=0, timerId=null;
+  const $=id=>document.getElementById(id);
+  const phaseEl=$("phase"), timeEl=$("time"), startBtn=$("start"), endBtn=$("end"), statusEl=$("status");
+  function format(ms){const t=Math.max(0,Math.ceil(ms/1000)),m=Math.floor(t/60),s=t%60;
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;}
+  function render(){
+    document.body.classList.toggle("break-mode",running&&phase==="break");
+    phaseEl.textContent=running?(phase==="work"?"作業中":"休憩中"):"準備完了";
+    timeEl.textContent=format(running?endAt-Date.now():(phase==="work"?WORK:BREAK));
+    startBtn.disabled=running; endBtn.disabled=!running;
+  }
+  async function notify(title,body){
+    try{
+      if("Notification" in window){
+        if(Notification.permission==="default") await Notification.requestPermission();
+        if(Notification.permission==="granted") new Notification(title,{body});
+      }
+    }catch(_){}
+    try{navigator.vibrate?.([300,150,300,150,500]);}catch(_){}
+    statusEl.textContent=body;
+  }
+  function nextPhase(){
+    phase=phase==="work"?"break":"work";
+    endAt=Date.now()+(phase==="work"?WORK:BREAK);
+    notify(phase==="work"?"作業スタート":"休憩スタート",
+      phase==="work"?"20分の作業時間です。":"2分休憩してください。");
+    render();
+  }
+  function tick(){if(!running)return; if(endAt-Date.now()<=0)nextPhase(); render();}
+  startBtn.addEventListener("click",async()=>{
+    running=true; phase="work"; endAt=Date.now()+WORK; statusEl.textContent="20分スタート。";
+    if("Notification" in window&&Notification.permission==="default"){
+      try{await Notification.requestPermission();}catch(_){}
+    }
+    render(); clearInterval(timerId); timerId=setInterval(tick,250);
+  });
+  endBtn.addEventListener("click",()=>{
+    running=false; clearInterval(timerId); timerId=null; phase="work"; endAt=0;
+    statusEl.textContent="終了しました。"; render();
+  });
+  document.addEventListener("visibilitychange",()=>{if(running)render();});
+  render();
+})();
+</script>
+</body>
+</html>
